@@ -120,16 +120,45 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 })({"app.js":[function(require,module,exports) {
 var ajax = new XMLHttpRequest();
 var NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
-ajax.open('GET', NEWS_URL, false);
-ajax.send();
-var newsFeed = JSON.parse(ajax.response);
-var root = document.getElementById('root');
+var CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json';
+
+var getData = function getData(url) {
+  ajax.open('GET', url, false);
+  ajax.send();
+  return JSON.parse(ajax.response);
+};
+
+var newsFeed = getData(NEWS_URL);
+var container = document.getElementById('root');
 var ul = document.createElement('ul');
-root.appendChild(ul);
+var content = document.createElement('div');
+container.appendChild(ul);
+container.appendChild(content);
+window.addEventListener('hashchange', function () {
+  // 앵커태그의 해시가 변경되었을때 이벤트가 발생한다.
+  // 해시를 CONTENT_URL의 id란에 넣고 API를 호출해야함
+  // 해시를 주소에서 가져와야 하는데 주소 맨끝에 해시가 붙어있으니까 코드는 다음과 같다
+  var id = location.hash.substring(1);
+  var newsContent = getData(CONTENT_URL.replace('@id', id));
+  var title = document.createElement('h1');
+  title.innerHTML = newsContent.title;
+  content.appendChild(title);
+});
 newsFeed.forEach(function (feed) {
-  var li = document.createElement('li');
-  li.innerHTML = feed.title;
-  ul.appendChild(li);
+  // HTML의 구조를 직관적으로 코드상에서 파악하기 위해 가급적이면 DOM API를 사용하지 않는다.
+  // const li = document.createElement('li');
+  // const a = document.createElement('a');
+  // a.innerHTML = `${feed.title} (${feed.comments_count})`;
+  // a.href = `#${feed.id}`;
+  // li.appendChild(a);
+  // ul.appendChild(li);
+  // a.addEventListener('click', function(){}); //이렇게하면 여러개의 앵커태그에 맞춰서 등록하기가 어렵다
+  var feedHead = "<li><a href = #".concat(feed.id, ">").concat(feed.title, " (").concat(feed.comments_count, ")</a></li>"); // div는 innerHTML을 사용하려고 임시로 만든 태그임 
+  // 따라서 태그의 depth가 깊어지게 하지 않기 위해서 div.children[0] 혹은 div.firstElementChild 라고 추가해야함
+
+  var div = document.createElement('div');
+  div.innerHTML = feedHead;
+  ul.appendChild(div.firstElementChild);
 });
 },{}],"../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
@@ -159,7 +188,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51175" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50038" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
