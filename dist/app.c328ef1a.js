@@ -122,6 +122,9 @@ var ajax = new XMLHttpRequest();
 var NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
 var CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json';
 var container = document.getElementById('root');
+var store = {
+  currentPage: 1
+};
 
 var getData = function getData(url) {
   ajax.open('GET', url, false);
@@ -133,11 +136,14 @@ var displayNewsFeed = function displayNewsFeed() {
   var newsFeeds = getData(NEWS_URL); //이와 같이 반복문을 사용해서 HTML을 문자열을 사용해서 구현할때는 배열을 활용하는게 기본적이다.
 
   var newsList = ["<ul>"];
-  newsFeeds.forEach(function (feed) {
-    // HTML의 구조를 직관적으로 코드상에서 파악하기 위해 가급적이면 DOM API를 사용하지 않는다.
-    newsList.push("<li><a href = #".concat(feed.id, ">").concat(feed.title, " (").concat(feed.comments_count, ")</a></li>"));
-  });
+  var maxPageNumber = newsFeeds.length / 10;
+
+  for (var i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++) {
+    newsList.push("<li><a href = #/detail/".concat(newsFeeds[i].id, ">").concat(newsFeeds[i].title, " (").concat(newsFeeds[i].comments_count, ")</a></li>"));
+  }
+
   newsList.push("</ul>");
+  newsList.push("\n        <div>\n            <a href=\"#/page/".concat(store.currentPage - 1 > 1 ? store.currentPage - 1 : 1, "\">\uC774\uC804 \uD398\uC774\uC9C0</a>\n            <a href=\"#/page/").concat(store.currentPage + 1 > maxPageNumber ? maxPageNumber : store.currentPage + 1, "\">\uB2E4\uC74C \uD398\uC774\uC9C0</a>\n        </div>\n    "));
   container.innerHTML = newsList.join('');
 };
 
@@ -145,9 +151,9 @@ var displayNewsDetail = function displayNewsDetail() {
   // 앵커태그의 해시가 변경되었을때 이벤트가 발생한다.
   // 해시를 CONTENT_URL의 id란에 넣고 API를 호출해야함
   // 해시를 주소에서 가져와야 하는데 주소 맨끝에 해시가 붙어있으니까 코드는 다음과 같다
-  var id = location.hash.substring(1);
+  var id = location.hash.substring(9);
   var newsContent = getData(CONTENT_URL.replace('@id', id));
-  container.innerHTML = "\n        <h1>".concat(newsContent.title, "</h1>\n        <div>\n            <a href = \"#\">\uBAA9\uB85D\uC73C\uB85C</a>\n        </div>\n    ");
+  container.innerHTML = "\n        <h1>".concat(newsContent.title, "</h1>\n        <div>\n            <a href = \"#/page/").concat(store.currentPage, "\">\uBAA9\uB85D\uC73C\uB85C</a>\n        </div>\n    ");
 };
 
 var router = function router() {
@@ -155,6 +161,9 @@ var router = function router() {
 
   if (routePath == '') {
     // #만 있으면 그냥 빈 문자열 ''로 나온다.
+    displayNewsFeed();
+  } else if (routePath.indexOf('/page') >= 0) {
+    store.currentPage = Number(routePath.substring(7));
     displayNewsFeed();
   } else {
     displayNewsDetail();
@@ -191,7 +200,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55845" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51476" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
