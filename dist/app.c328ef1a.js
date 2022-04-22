@@ -123,7 +123,8 @@ var NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
 var CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json';
 var container = document.getElementById('root');
 var store = {
-  currentPage: 1
+  currentPage: 1,
+  feeds: []
 };
 
 var getData = function getData(url) {
@@ -132,19 +133,34 @@ var getData = function getData(url) {
   return JSON.parse(ajax.response);
 };
 
-var displayNewsFeed = function displayNewsFeed() {
-  var newsFeeds = getData(NEWS_URL); //이와 같이 반복문을 사용해서 HTML을 문자열을 사용해서 구현할때는 배열을 활용하는게 기본적이다.
+var makeFirstFeedForReadState = function makeFirstFeedForReadState(feeds) {
+  // 처음 피드 데이터를 받아오면서 read속성을 false값으로 초기화해서 부여하기 위한 함수
+  for (var i = 0; i < feeds.length; i++) {
+    feeds[i].read = false;
+  }
 
-  var newsList = ["<ul>"];
+  return feeds;
+};
+
+var displayNewsFeed = function displayNewsFeed() {
+  var newsFeeds = store.feeds;
+
+  if (newsFeeds.length == 0) {
+    newsFeeds = store.feeds = makeFirstFeedForReadState(getData(NEWS_URL));
+  }
+
+  var template = "\n    <div class=\"bg-gray-600 min-h-screen\">\n      <div class=\"bg-white text-xl\">\n        <div class=\"mx-auto px-4\">\n          <div class=\"flex justify-between items-center py-6\">\n            <div class=\"flex justify-start\">\n              <h1 class=\"font-extrabold\">Hacker News</h1>\n            </div>\n            <div class=\"items-center justify-end\">\n              <a href=\"#/page/@prev_page\" class=\"text-gray-900\">\n                Previous\n              </a>\n              <a href=\"#/page/@next_page\" class=\"text-gray-900 ml-4\">\n                Next\n              </a>\n            </div>\n          </div> \n        </div>\n      </div>\n      <div class=\"p-4 text-2xl text-gray-700\">\n        @news_list        \n      </div>\n    </div>\n  ";
+  var newsList = [];
   var maxPageNumber = newsFeeds.length / 10;
 
   for (var i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++) {
-    newsList.push("<li><a href = #/detail/".concat(newsFeeds[i].id, ">").concat(newsFeeds[i].title, " (").concat(newsFeeds[i].comments_count, ")</a></li>"));
+    newsList.push("\n            <div class=\"p-6 ".concat(newsFeeds[i].read ? 'bg-green-600' : 'bg-white', " mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100\">\n            <div class=\"flex\">\n                <div class=\"flex-auto\">\n                <a href=\"#/detail/").concat(newsFeeds[i].id, "\">").concat(newsFeeds[i].title, "</a>  \n                </div>\n                <div class=\"text-center text-sm\">\n                <div class=\"w-10 text-white bg-green-300 rounded-lg px-0 py-2\">").concat(newsFeeds[i].comments_count, "</div>\n                </div>\n            </div>\n            <div class=\"flex mt-3\">\n                <div class=\"grid grid-cols-3 text-sm text-gray-500\">\n                <div><i class=\"fas fa-user mr-1\"></i>").concat(newsFeeds[i].user, "</div>\n                <div><i class=\"fas fa-heart mr-1\"></i>").concat(newsFeeds[i].points, "</div>\n                <div><i class=\"far fa-clock mr-1\"></i>").concat(newsFeeds[i].time_ago, "</div>\n                </div>  \n            </div>\n            </div>    \n      "));
   }
 
-  newsList.push("</ul>");
-  newsList.push("\n        <div>\n            <a href=\"#/page/".concat(store.currentPage - 1 > 1 ? store.currentPage - 1 : 1, "\">\uC774\uC804 \uD398\uC774\uC9C0</a>\n            <a href=\"#/page/").concat(store.currentPage + 1 > maxPageNumber ? maxPageNumber : store.currentPage + 1, "\">\uB2E4\uC74C \uD398\uC774\uC9C0</a>\n        </div>\n    "));
-  container.innerHTML = newsList.join('');
+  template = template.replace('@news_list', newsList.join(''));
+  template = template.replace('@prev_page', store.currentPage - 1 > 1 ? store.currentPage - 1 : 1);
+  template = template.replace('@next_page', store.currentPage + 1 > maxPageNumber ? maxPageNumber : store.currentPage + 1);
+  container.innerHTML = template;
 };
 
 var displayNewsDetail = function displayNewsDetail() {
@@ -152,8 +168,33 @@ var displayNewsDetail = function displayNewsDetail() {
   // 해시를 CONTENT_URL의 id란에 넣고 API를 호출해야함
   // 해시를 주소에서 가져와야 하는데 주소 맨끝에 해시가 붙어있으니까 코드는 다음과 같다
   var id = location.hash.substring(9);
+
+  for (var i = 0; i < store.feeds.length; i++) {
+    if (store.feeds[i].id == Number(id)) {
+      store.feeds[i].read = true;
+      break;
+    }
+  }
+
   var newsContent = getData(CONTENT_URL.replace('@id', id));
-  container.innerHTML = "\n        <h1>".concat(newsContent.title, "</h1>\n        <div>\n            <a href = \"#/page/").concat(store.currentPage, "\">\uBAA9\uB85D\uC73C\uB85C</a>\n        </div>\n    ");
+  var template = "\n    <div class=\"bg-gray-600 min-h-screen pb-8\">\n      <div class=\"bg-white text-xl\">\n        <div class=\"mx-auto px-4\">\n          <div class=\"flex justify-between items-center py-6\">\n            <div class=\"flex justify-start\">\n              <h1 class=\"font-extrabold\">Hacker News</h1>\n            </div>\n            <div class=\"items-center justify-end\">\n              <a href=\"#/page/".concat(store.currentPage, "\" class=\"text-gray-500\">\n                <i class=\"fa fa-times\"></i>\n              </a>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class=\"h-full border rounded-xl bg-white m-6 p-4 \">\n        <h2>").concat(newsContent.title, "</h2>\n        <div class=\"text-gray-400 h-20\">\n          ").concat(newsContent.content, "\n        </div>\n\n        @comments\n\n      </div>\n    </div>\n    ");
+
+  var makeComment = function makeComment(comments, called) {
+    var commentString = [];
+
+    for (var _i = 0; _i < comments.length; _i++) {
+      commentString.push("\n            <div style=\"padding-left: ".concat(called * 40, "px;\" class=\"mt-4\">\n              <div class=\"text-gray-400\">\n                <i class=\"fa fa-sort-down mr-2\"></i>\n                <strong>").concat(comments[_i].user, "</strong> ").concat(comments[_i].time_ago, "\n              </div>\n              <p class=\"text-gray-700\">").concat(comments[_i].content, "</p>\n            </div>      \n          "));
+
+      if (comments[_i].comments.length > 0) {
+        commentString.push(makeComment(comments[_i].comments, called + 1));
+      }
+    }
+
+    return commentString.join('');
+  };
+
+  template = template.replace('@comments', makeComment(newsContent.comments, 0));
+  container.innerHTML = template;
 };
 
 var router = function router() {
@@ -200,7 +241,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51476" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52003" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
